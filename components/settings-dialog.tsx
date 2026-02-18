@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   Dialog,
@@ -6,37 +6,38 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { useStore, useActions } from "@/lib/store"
-import type { ApiProvider } from "@/lib/types"
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useStore, useActions } from "@/lib/store";
+import type { ApiProvider } from "@/lib/types";
 
 const GEMINI_MODELS = [
-  { value: "google/gemini-2.0-flash", label: "Gemini 2.0 Flash" },
-  { value: "google/gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite" },
-  { value: "google/gemini-2.5-flash-preview-05-20", label: "Gemini 2.5 Flash" },
-  { value: "google/gemini-2.5-pro-preview-05-06", label: "Gemini 2.5 Pro" },
-]
+  { value: "google/gemini-3-pro-preview", label: "Gemini 3 Pro" },
+  { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash" },
+  { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+  { value: "google/gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite" },
+];
 
 export function SettingsDialog({
   open,
   onOpenChange,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const { state } = useStore()
-  const { updateSettings } = useActions()
-  const { settings } = state
+  const { state } = useStore();
+  const { updateSettings } = useActions();
+  const { settings } = state;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -61,13 +62,19 @@ export function SettingsDialog({
             >
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="gateway" id="provider-gateway" />
-                <Label htmlFor="provider-gateway" className="font-normal cursor-pointer">
+                <Label
+                  htmlFor="provider-gateway"
+                  className="font-normal cursor-pointer"
+                >
                   Vercel AI Gateway (default)
                 </Label>
               </div>
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="gemini" id="provider-gemini" />
-                <Label htmlFor="provider-gemini" className="font-normal cursor-pointer">
+                <Label
+                  htmlFor="provider-gemini"
+                  className="font-normal cursor-pointer"
+                >
                   Your Gemini API Key
                 </Label>
               </div>
@@ -117,5 +124,5 @@ export function SettingsDialog({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
