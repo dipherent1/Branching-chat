@@ -248,7 +248,7 @@ export function PathView() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto" ref={scrollRef}>
-        <div className="mx-auto max-w-2xl flex flex-col gap-4 p-4 pb-2">
+        <div className="mx-auto max-w-4xl flex flex-col gap-4 p-4 pb-2">
           {messages.map((msg) => (
             <MessageBubble key={msg.id} message={msg} />
           ))}
@@ -280,15 +280,17 @@ export function PathView() {
       </div>
 
       {/* Chat input */}
-      <ChatInput
-        onSend={handleChatSend}
-        disabled={isStreaming}
-        placeholder={
-          isFreshBranch
-            ? "Type your message to start this branch..."
-            : "Type a message to create a new branch..."
-        }
-      />
+      <div className="mx-auto max-w-4xl w-full">
+        <ChatInput
+          onSend={handleChatSend}
+          disabled={isStreaming}
+          placeholder={
+            isFreshBranch
+              ? "Type your message to start this branch..."
+              : "Type a message to create a new branch..."
+          }
+        />
+      </div>
     </div>
   );
 }
