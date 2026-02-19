@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   createContext,
@@ -7,33 +7,33 @@ import {
   useCallback,
   type Dispatch,
   type ReactNode,
-} from "react"
-import type { ConversationTree, Settings, ViewMode, ChatNode } from "./types"
-import { createBranchNode } from "./tree-utils"
-import React from "react"
+} from "react";
+import type { ConversationTree, Settings, ViewMode, ChatNode } from "./types";
+import { createBranchNode } from "./tree-utils";
+import React from "react";
 
 // ── State ──
 
 export type AppState = {
-  tree: ConversationTree | null
-  selectedNodeId: string | null
-  activeView: ViewMode
-  settings: Settings
-}
+  tree: ConversationTree | null;
+  selectedNodeId: string | null;
+  activeView: ViewMode;
+  settings: Settings;
+};
 
 const defaultSettings: Settings = {
-  apiProvider: "gateway",
+  apiProvider: "gemini",
   geminiApiKey: "",
-  geminiModel: "google/gemini-2.0-flash",
-}
+  geminiModel: "google/gemini-2.5-pro",
+};
 
 function loadSettings(): Settings {
-  if (typeof window === "undefined") return defaultSettings
+  if (typeof window === "undefined") return defaultSettings;
   try {
-    const saved = localStorage.getItem("branching-chats-settings")
-    if (saved) return { ...defaultSettings, ...JSON.parse(saved) }
+    const saved = localStorage.getItem("branching-chats-settings");
+    if (saved) return { ...defaultSettings, ...JSON.parse(saved) };
   } catch {}
-  return defaultSettings
+  return defaultSettings;
 }
 
 const initialState: AppState = {
@@ -41,7 +41,7 @@ const initialState: AppState = {
   selectedNodeId: null,
   activeView: "tree",
   settings: defaultSettings,
-}
+};
 
 // ── Actions ──
 
@@ -52,7 +52,7 @@ type Action =
   | { type: "UPDATE_SETTINGS"; settings: Partial<Settings> }
   | { type: "BRANCH_FROM_NODE"; nodeId: string }
   | { type: "UPDATE_NODE"; nodeId: string; patch: Partial<ChatNode> }
-  | { type: "INIT_SETTINGS" }
+  | { type: "INIT_SETTINGS" };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -62,43 +62,43 @@ function reducer(state: AppState, action: Action): AppState {
         tree: action.tree,
         selectedNodeId: action.tree.rootId,
         activeView: "tree",
-      }
+      };
 
     case "SELECT_NODE":
-      return { ...state, selectedNodeId: action.nodeId }
+      return { ...state, selectedNodeId: action.nodeId };
 
     case "SET_VIEW":
-      return { ...state, activeView: action.view }
+      return { ...state, activeView: action.view };
 
     case "UPDATE_SETTINGS": {
-      const newSettings = { ...state.settings, ...action.settings }
+      const newSettings = { ...state.settings, ...action.settings };
       if (typeof window !== "undefined") {
         localStorage.setItem(
           "branching-chats-settings",
-          JSON.stringify(newSettings)
-        )
+          JSON.stringify(newSettings),
+        );
       }
-      return { ...state, settings: newSettings }
+      return { ...state, settings: newSettings };
     }
 
     case "BRANCH_FROM_NODE": {
-      if (!state.tree) return state
+      if (!state.tree) return state;
       const { nodes, newNodeId } = createBranchNode(
         action.nodeId,
-        state.tree.nodes
-      )
+        state.tree.nodes,
+      );
       return {
         ...state,
         tree: { ...state.tree, nodes },
         selectedNodeId: newNodeId,
         activeView: "path",
-      }
+      };
     }
 
     case "UPDATE_NODE": {
-      if (!state.tree) return state
-      const node = state.tree.nodes[action.nodeId]
-      if (!node) return state
+      if (!state.tree) return state;
+      const node = state.tree.nodes[action.nodeId];
+      if (!node) return state;
       return {
         ...state,
         tree: {
@@ -108,76 +108,76 @@ function reducer(state: AppState, action: Action): AppState {
             [action.nodeId]: { ...node, ...action.patch },
           },
         },
-      }
+      };
     }
 
     case "INIT_SETTINGS":
-      return { ...state, settings: loadSettings() }
+      return { ...state, settings: loadSettings() };
 
     default:
-      return state
+      return state;
   }
 }
 
 // ── Context ──
 
 const StoreContext = createContext<{
-  state: AppState
-  dispatch: Dispatch<Action>
-} | null>(null)
+  state: AppState;
+  dispatch: Dispatch<Action>;
+} | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initialState)
+  const [state, dispatch] = useReducer(reducer, initialState);
 
   // Load settings from localStorage on mount
   React.useEffect(() => {
-    dispatch({ type: "INIT_SETTINGS" })
-  }, [])
+    dispatch({ type: "INIT_SETTINGS" });
+  }, []);
 
   return React.createElement(
     StoreContext.Provider,
     { value: { state, dispatch } },
-    children
-  )
+    children,
+  );
 }
 
 export function useStore() {
-  const ctx = useContext(StoreContext)
-  if (!ctx) throw new Error("useStore must be used within StoreProvider")
-  return ctx
+  const ctx = useContext(StoreContext);
+  if (!ctx) throw new Error("useStore must be used within StoreProvider");
+  return ctx;
 }
 
 // ── Convenience hooks ──
 
 export function useActions() {
-  const { dispatch } = useStore()
+  const { dispatch } = useStore();
 
   return {
     importTree: useCallback(
       (tree: ConversationTree) => dispatch({ type: "IMPORT_TREE", tree }),
-      [dispatch]
+      [dispatch],
     ),
     selectNode: useCallback(
       (nodeId: string | null) => dispatch({ type: "SELECT_NODE", nodeId }),
-      [dispatch]
+      [dispatch],
     ),
     setView: useCallback(
       (view: ViewMode) => dispatch({ type: "SET_VIEW", view }),
-      [dispatch]
+      [dispatch],
     ),
     updateSettings: useCallback(
       (settings: Partial<Settings>) =>
         dispatch({ type: "UPDATE_SETTINGS", settings }),
-      [dispatch]
+      [dispatch],
     ),
     branchFromNode: useCallback(
       (nodeId: string) => dispatch({ type: "BRANCH_FROM_NODE", nodeId }),
-      [dispatch]
+      [dispatch],
     ),
     updateNode: useCallback(
       (nodeId: string, patch: Partial<ChatNode>) =>
         dispatch({ type: "UPDATE_NODE", nodeId, patch }),
-      [dispatch]
+      [dispatch],
     ),
-  }
+  };
 }

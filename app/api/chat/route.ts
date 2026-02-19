@@ -11,6 +11,14 @@ export async function POST(req: Request) {
     const { messages, model: modelName, apiProvider } = await req.json();
     const geminiApiKey = req.headers.get("x-gemini-api-key");
 
+    // Debug logs: do not log the actual API key
+    console.log("[v0] /api/chat received request", {
+      apiProvider,
+      modelName,
+      geminiApiKeyProvided: !!geminiApiKey,
+      messagesCount: Array.isArray(messages) ? messages.length : 0,
+    });
+
     // Mock mode - return lorem ipsum generator
     if (USE_MOCK) {
       return createMockStreamResponse(messages);
@@ -19,17 +27,24 @@ export async function POST(req: Request) {
     // Real AI mode
     // Determine which model/provider to use
     let model: Parameters<typeof streamText>[0]["model"];
+    let usedProvider = "gateway";
 
     if (apiProvider === "gemini" && geminiApiKey) {
       // User-provided Gemini API key -> direct Google provider
+      usedProvider = "gemini";
+      console.log("[v0] Using direct Google provider (Gemini) path");
       const google = createGoogleGenerativeAI({ apiKey: geminiApiKey });
       // Strip "google/" prefix if present since the Google provider adds it
       const cleanModel =
         modelName?.replace(/^google\//, "") || "gemini-2.5-flash";
+      console.log("[v0] Google model chosen:", cleanModel);
       model = google(cleanModel);
     } else {
       // Default: Vercel AI Gateway (pass model string directly)
+      usedProvider = "gateway";
+      console.log("[v0] Using Vercel AI Gateway path");
       model = modelName || "google/gemini-2.5-flash";
+      console.log("[v0] Gateway model string:", model);
     }
 
     const result = streamText({
@@ -41,7 +56,10 @@ export async function POST(req: Request) {
       abortSignal: req.signal,
     });
 
-    return result.toTextStreamResponse();
+    // Attach a debug header to the streaming response so the client can see which provider was used
+    const response = result.toTextStreamResponse();
+
+    return response;
   } catch (error) {
     console.error("Chat error:", error);
     return new Response(JSON.stringify({ error: "Error processing request" }), {

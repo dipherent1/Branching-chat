@@ -1,43 +1,43 @@
-"use client"
+"use client";
 
-import { useMemo, useRef, useEffect, useState, useCallback } from "react"
-import { User, Bot, Sparkles } from "lucide-react"
-import ReactMarkdown from "react-markdown"
-import { Button } from "@/components/ui/button"
-import { ChatInput } from "@/components/chat-input"
-import { useStore, useActions } from "@/lib/store"
-import { getPathToRoot, buildChatHistory } from "@/lib/tree-utils"
-import { cn } from "@/lib/utils"
+import { useMemo, useRef, useEffect, useState, useCallback } from "react";
+import { User, Bot, Sparkles } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { Button } from "@/components/ui/button";
+import { ChatInput } from "@/components/chat-input";
+import { useStore, useActions } from "@/lib/store";
+import { getPathToRoot, buildChatHistory } from "@/lib/tree-utils";
+import { cn } from "@/lib/utils";
 
 export function PathView() {
-  const { state } = useStore()
-  const { selectNode, branchFromNode, updateNode } = useActions()
-  const { tree, selectedNodeId, settings } = state
+  const { state } = useStore();
+  const { selectNode, branchFromNode, updateNode } = useActions();
+  const { tree, selectedNodeId, settings } = state;
 
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [isStreaming, setIsStreaming] = useState(false)
-  const [streamingText, setStreamingText] = useState("")
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingText, setStreamingText] = useState("");
 
   // Compute the path of messages to display
   const pathNodeIds = useMemo(() => {
-    if (!tree || !selectedNodeId) return []
-    return getPathToRoot(selectedNodeId, tree.nodes)
-  }, [tree, selectedNodeId])
+    if (!tree || !selectedNodeId) return [];
+    return getPathToRoot(selectedNodeId, tree.nodes);
+  }, [tree, selectedNodeId]);
 
   // Build flat message list from path
   const messages = useMemo(() => {
-    if (!tree) return []
+    if (!tree) return [];
     const msgs: {
-      id: string
-      role: "user" | "assistant"
-      content: string
-      nodeId: string
-      source: "imported" | "generated"
-    }[] = []
+      id: string;
+      role: "user" | "assistant";
+      content: string;
+      nodeId: string;
+      source: "imported" | "generated";
+    }[] = [];
 
     for (const nodeId of pathNodeIds) {
-      const node = tree.nodes[nodeId]
-      if (!node) continue
+      const node = tree.nodes[nodeId];
+      if (!node) continue;
       if (node.prompt) {
         msgs.push({
           id: `${nodeId}-prompt`,
@@ -45,7 +45,7 @@ export function PathView() {
           content: node.prompt,
           nodeId,
           source: node.source,
-        })
+        });
       }
       if (node.response) {
         msgs.push({
@@ -54,108 +54,131 @@ export function PathView() {
           content: node.response,
           nodeId,
           source: node.source,
-        })
+        });
       }
     }
 
-    return msgs
-  }, [tree, pathNodeIds])
+    return msgs;
+  }, [tree, pathNodeIds]);
 
   // Current node for branching context
-  const currentNode = tree && selectedNodeId ? tree.nodes[selectedNodeId] : null
+  const currentNode =
+    tree && selectedNodeId ? tree.nodes[selectedNodeId] : null;
 
   // Scroll to bottom on new messages
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages.length, streamingText])
+  }, [messages.length, streamingText]);
 
   // Branch selector: show siblings when current node has siblings
   const parentNode =
-    currentNode?.parentId && tree ? tree.nodes[currentNode.parentId] : null
-  const siblings = parentNode ? parentNode.childIds : []
+    currentNode?.parentId && tree ? tree.nodes[currentNode.parentId] : null;
+  const siblings = parentNode ? parentNode.childIds : [];
 
   const handleSendToNode = useCallback(
     async (text: string, nodeId?: string) => {
-      if (!tree) return
+      if (!tree) return;
 
-      const targetId = nodeId || selectedNodeId
-      if (!targetId) return
+      const targetId = nodeId || selectedNodeId;
+      if (!targetId) return;
 
       // Update the node's prompt
-      updateNode(targetId, { prompt: text })
+      updateNode(targetId, { prompt: text });
 
       // Build chat history up to the parent of this node
-      const parentId = tree.nodes[targetId]?.parentId
-      const history = parentId ? buildChatHistory(parentId, tree.nodes) : []
+      const parentId = tree.nodes[targetId]?.parentId;
+      const history = parentId ? buildChatHistory(parentId, tree.nodes) : [];
       // Add the new user message
-      history.push({ role: "user", content: text })
+      history.push({ role: "user", content: text });
 
       console.log("[v0] Sending chat history:", {
         targetId,
         parentId,
         historyLength: history.length,
-        history: history.map(m => ({ role: m.role, contentPreview: m.content.slice(0, 50) }))
-      })
+        history: history.map((m) => ({
+          role: m.role,
+          contentPreview: m.content.slice(0, 50),
+        })),
+      });
 
-      setIsStreaming(true)
-      setStreamingText("")
+      setIsStreaming(true);
+      setStreamingText("");
 
       try {
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
-        }
+        };
         if (settings.apiProvider === "gemini" && settings.geminiApiKey) {
-          headers["x-gemini-api-key"] = settings.geminiApiKey
+          headers["x-gemini-api-key"] = settings.geminiApiKey;
         }
+
+        // Log headers and payload for debugging
+        console.log("[v0] Request headers:", {
+          apiProvider: settings.apiProvider,
+          hasGeminiKey: !!settings.geminiApiKey,
+          headersPreview: Object.keys(headers),
+        });
+
+        const payload = {
+          messages: history,
+          model: settings.geminiModel,
+          apiProvider: settings.apiProvider,
+        };
+        console.log("[v0] Sending POST /api/chat", {
+          payloadSummary: {
+            messages: history.length,
+            model: payload.model,
+            apiProvider: payload.apiProvider,
+          },
+        });
 
         const res = await fetch("/api/chat", {
           method: "POST",
           headers,
-          body: JSON.stringify({
-            messages: history,
-            model: settings.geminiModel,
-            apiProvider: settings.apiProvider,
-          }),
-        })
+          body: JSON.stringify(payload),
+        });
 
-        if (!res.ok) throw new Error("Failed to get response")
+        console.log("[v0] /api/chat response status:", res.status);
 
-        const reader = res.body?.getReader()
-        if (!reader) throw new Error("No response body")
+        if (!res.ok) throw new Error("Failed to get response");
 
-        const decoder = new TextDecoder()
-        let fullText = ""
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error("No response body");
+
+        const decoder = new TextDecoder();
+        let fullText = "";
 
         while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          const chunk = decoder.decode(value, { stream: true })
-          fullText += chunk
-          setStreamingText(fullText)
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          fullText += chunk;
+          setStreamingText(fullText);
         }
 
         // Save the completed response to the node
-        updateNode(targetId, { response: fullText })
+        updateNode(targetId, { response: fullText });
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "Error getting response"
-        updateNode(targetId, { response: `Error: ${errorMsg}` })
+        const errorMsg =
+          err instanceof Error ? err.message : "Error getting response";
+        updateNode(targetId, { response: `Error: ${errorMsg}` });
       } finally {
-        setIsStreaming(false)
-        setStreamingText("")
+        setIsStreaming(false);
+        setStreamingText("");
       }
     },
-    [tree, selectedNodeId, settings, updateNode]
-  )
+    [tree, selectedNodeId, settings, updateNode],
+  );
 
   // Store pending message for after branch creation
-  const pendingMessage = useRef<string | null>(null)
+  const pendingMessage = useRef<string | null>(null);
 
   // When sending a message, branch first if needed, then send
   const handleChatSend = useCallback(
     async (text: string) => {
-      if (!tree || !selectedNodeId) return
+      if (!tree || !selectedNodeId) return;
 
       if (
         currentNode &&
@@ -164,15 +187,15 @@ export function PathView() {
         currentNode.source === "generated"
       ) {
         // This is already an empty branch node created previously: fill it in
-        await handleSendToNode(text, selectedNodeId)
+        await handleSendToNode(text, selectedNodeId);
       } else {
         // Create a new branch from current node and queue the message
-        pendingMessage.current = text
-        branchFromNode(selectedNodeId)
+        pendingMessage.current = text;
+        branchFromNode(selectedNodeId);
       }
     },
-    [tree, selectedNodeId, currentNode, branchFromNode, handleSendToNode]
-  )
+    [tree, selectedNodeId, currentNode, branchFromNode, handleSendToNode],
+  );
 
   // Effect to send pending message after branch is created
   useEffect(() => {
@@ -183,23 +206,23 @@ export function PathView() {
       currentNode.response === "" &&
       currentNode.source === "generated"
     ) {
-      const msg = pendingMessage.current
-      pendingMessage.current = null
-      handleSendToNode(msg, selectedNodeId!)
+      const msg = pendingMessage.current;
+      pendingMessage.current = null;
+      handleSendToNode(msg, selectedNodeId!);
     }
-  }, [selectedNodeId, currentNode, handleSendToNode])
+  }, [selectedNodeId, currentNode, handleSendToNode]);
 
   if (!tree || !selectedNodeId) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground">
         Select a node to view the conversation path
       </div>
-    )
+    );
   }
 
   // Check if the selected node is a fresh branch with no content
   const isFreshBranch =
-    currentNode?.prompt === "" && currentNode?.response === ""
+    currentNode?.prompt === "" && currentNode?.response === "";
 
   return (
     <div className="flex h-full flex-col">
@@ -212,9 +235,7 @@ export function PathView() {
           {siblings.map((sibId, i) => (
             <Button
               key={sibId}
-              variant={
-                pathNodeIds.includes(sibId) ? "default" : "outline"
-              }
+              variant={pathNodeIds.includes(sibId) ? "default" : "outline"}
               size="sm"
               className="h-6 text-xs px-2"
               onClick={() => selectNode(sibId)}
@@ -269,7 +290,7 @@ export function PathView() {
         }
       />
     </div>
-  )
+  );
 }
 
 // ── Message Bubble ──
@@ -278,19 +299,17 @@ function MessageBubble({
   message,
 }: {
   message: {
-    id: string
-    role: "user" | "assistant"
-    content: string
-    nodeId: string
-    source: "imported" | "generated"
-  }
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+    nodeId: string;
+    source: "imported" | "generated";
+  };
 }) {
-  const isUser = message.role === "user"
+  const isUser = message.role === "user";
 
   return (
-    <div
-      className={cn("flex gap-3", isUser ? "justify-end" : "justify-start")}
-    >
+    <div className={cn("flex gap-3", isUser ? "justify-end" : "justify-start")}>
       {!isUser && (
         <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted">
           {message.source === "generated" ? (
@@ -306,7 +325,7 @@ function MessageBubble({
           "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm break-words overflow-wrap-anywhere",
           isUser
             ? "bg-primary text-primary-foreground rounded-br-md"
-            : "bg-muted text-foreground rounded-bl-md"
+            : "bg-muted text-foreground rounded-bl-md",
         )}
       >
         {isUser ? (
@@ -324,5 +343,5 @@ function MessageBubble({
         </div>
       )}
     </div>
-  )
+  );
 }

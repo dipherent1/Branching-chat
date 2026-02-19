@@ -61,21 +61,22 @@ export function SettingsDialog({
               className="flex flex-col gap-2"
             >
               <div className="flex items-center gap-2">
-                <RadioGroupItem value="gateway" id="provider-gateway" />
-                <Label
-                  htmlFor="provider-gateway"
-                  className="font-normal cursor-pointer"
-                >
-                  Vercel AI Gateway (default)
-                </Label>
-              </div>
-              <div className="flex items-center gap-2">
                 <RadioGroupItem value="gemini" id="provider-gemini" />
                 <Label
                   htmlFor="provider-gemini"
                   className="font-normal cursor-pointer"
                 >
-                  Your Gemini API Key
+                  Your Gemini API Key (default)
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="gateway" id="provider-gateway" />
+                <Label
+                  htmlFor="provider-gateway"
+                  className="font-normal cursor-pointer"
+                >
+                  Vercel AI Gateway
                 </Label>
               </div>
             </RadioGroup>
@@ -98,6 +99,18 @@ export function SettingsDialog({
               />
               <p className="text-xs text-muted-foreground">
                 Your key is stored locally and sent directly to Google.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Don't have a key? Get one from{" "}
+                <a
+                  href="https://aistudio.google.com/api-keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  AI Studio
+                </a>
+                .
               </p>
             </div>
           )}
